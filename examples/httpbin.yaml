@@ -10,6 +10,7 @@ metadata:
     vault.security.banzaicloud.io/vault-role: "httpbin"
     vault.security.banzaicloud.io/vault-skip-verify: "true"
 spec:
+  serviceAccountName: default
   containers:
   - name: vault
     image: busybox
