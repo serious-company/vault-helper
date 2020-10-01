@@ -16,10 +16,6 @@ purge() {
   echo "AUTH_NAME=$AUTH_NAME"
   echo "========================="
 
-  # Disable K/V v1 at secret/ if it's not already available
-  echo "vault secrets disable $ENGINE_NAME ..."
-  vault secrets disable $ENGINE_NAME
-
   # Disable kubernetes auth for this role
   echo "vault auth disable $AUTH_NAME ..."
   vault auth disable $AUTH_NAME
