@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+
+dump () {
+  ENGINE_NAME="${1:-sample-cluster}"
+  AUTH_NAME="${1:-$ENGINE_NAME}"
+  ROLE_NAME="${2:-$APP}"
+  APP="${2:-sample-app}"
+  POLICY="$ENGINE_NAME-$ROLE_NAME"
+
+  echo "vault policy read $POLICY ..."
+  vault policy read $POLICY
+
+  echo "vault read auth/$AUTH_NAME/role/$ROLE_NAME ..."
+  vault read "auth/$AUTH_NAME/role/$ROLE_NAME"
+
+  echo "kubectl cluster-info"
+  kubectl cluster-info
+}
+
+help () {
+  ENGINE_NAME="${1:-sample-cluster}"
+  AUTH_NAME="${1:-$ENGINE_NAME}"
+  ROLE_NAME="${2:-$APP}"
+  APP="${2:-sample-app}"
+cat <<EOF
+#
+vault kv put "$ENGINE_NAME/$APP" foo='bar'
+vault kv get "$ENGINE_NAME/$APP" foo='bar'
+
+#
+kubectl -n $APP run tmp --rm -i --tty --image dwdraju/alpine-curl-jq -- bash
+KUBE_TOKEN=\$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+TOKEN=\$(curl --request POST --data '{"jwt": "'"\$KUBE_TOKEN"'", "role": "$ROLE_NAME"}' $VAULT_ADDR/v1/auth/$AUTH_NAME/login | jq -r ".auth.client_token")
+curl -s -H "X-Vault-Token: \$TOKEN" --request LIST $VAULT_ADDR/v1/$ENGINE_NAME/metadata | jq
+curl -s -H "X-Vault-Token: \$TOKEN" $VAULT_ADDR/v1/$ENGINE_NAME/data/$APP | jq
+
+#
+kubectl -n $APP delete pod tmp
+
+#
+KUBE_TOKEN=\$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+curl -s --request POST --data '{"jwt": "'"\$KUBE_TOKEN"'", "role": "$ROLE_NAME"}' $VAULT_ADDR/v1/auth/$AUTH_NAME/login | jq
+
+# Check the cluster role binding, vault-auth is the convention
+kubectl get clusterrolebinding vault-auth -oyaml
+EOF
+}

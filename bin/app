@@ -1,0 +1,70 @@
+#!/usr/bin/env sh
+
+policy_file_create() {
+  #
+  ENGINE_NAME=$1
+  APP=$2
+  AUTH_NAME="${AUTH_NAME:-$ENGINE_NAME}"
+  tmpfile=$(mktemp /tmp/$APP.XXXXXX)
+
+cat <<-EOF >> $tmpfile
+path "$ENGINE_NAME/data/*" {
+  capabilities = ["read"]
+}
+path "$ENGINE_NAME/metadata/*" {
+  capabilities = ["list"]
+}
+EOF
+  echo $tmpfile
+}
+
+delete() {
+  #
+  ENGINE_NAME=$1
+  APP=$2
+  ROLE_NAME=$APP
+  AUTH_NAME="${AUTH_NAME:-$ENGINE_NAME}"
+  POLICY="$ENGINE_NAME-$APP"
+
+  echo "vault policy delete $POLICY ..."
+  vault policy delete $POLICY
+
+  echo "vault delete auth/$AUTH_NAME/role/$ROLE_NAME ..."
+  vault delete "auth/$AUTH_NAME/role/$ROLE_NAME"
+}
+
+create() {
+  #
+  ENGINE_NAME=$1
+  APP=$2
+  NM=$APP
+  ROLE_NAME=$APP
+  POLICY="$ENGINE_NAME-$APP"
+  AUTH_NAME="${AUTH_NAME:-$ENGINE_NAME}"
+
+  #
+  SVC_ACCOUNT=$(kubectl -n $NM get deploy $APP -ojsonpath="{.spec.template.spec.serviceAccount}")
+  SVC_ACCOUNT="${SVC_ACCOUNT:-$APP}"
+
+  # Delete policy before creating
+  echo "vault policy delete $POLICY ..."
+  vault policy delete $POLICY
+
+  # Create policy
+  echo "vault policy write $POLICY <FILE> ..."
+  vault policy write $POLICY $(policy_file_create $ENGINE_NAME $APP)
+
+  # Delete role before creating
+  echo "vault delete auth/$AUTH_NAME/role/$ROLE_NAME ..."
+  vault delete "auth/$AUTH_NAME/role/$ROLE_NAME"
+
+  # Create an auth role
+  echo "vault write auth/$AUTH_NAME/role/$ROLE_NAME ..."
+  vault write "auth/$AUTH_NAME/role/$ROLE_NAME" \
+    bound_service_account_names="$SVC_ACCOUNT" \
+    bound_service_account_names="$APP" \
+    bound_service_account_names="default" \
+    bound_service_account_namespaces="$NM" \
+    policies="$POLICY" \
+    ttl=24h
+}

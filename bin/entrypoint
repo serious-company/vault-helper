@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+
+# Default envs
+: "${VAULT_ADDR:?VAULT_ADDR Variable not set or empty}"
+: "${VAULT_TOKEN:?VAULT_TOKEN Variable not set or empty}"
+
+
+# Source functions
+source ./app
+source ./debug
+source ./setup
+
+# Header
+echo """
+App Create
+==========================
+create <engine-name> <app-name>
+delete <engine-name> <app-name>
+
+Setup
+==========================
+init <engine-name>
+purge <engine-name>
+
+Debug
+==========================
+dump
+help
+"""
+
+"$@"

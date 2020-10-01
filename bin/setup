@@ -1,0 +1,75 @@
+#!/usr/bin/env sh
+
+VAULT_NM=vault-secrets-webhook
+
+purge() {
+  # Check
+  : "${1:?Parameter cannot be empty}"
+
+  # Params
+  AUTH_NAME=$1
+  ENGINE_NAME=$1
+
+  #
+  echo "Purge ========================="
+  echo "ENGINE_NAME=$ENGINE_NAME"
+  echo "AUTH_NAME=$AUTH_NAME"
+  echo "========================="
+
+  # Disable K/V v1 at secret/ if it's not already available
+  echo "vault secrets disable $ENGINE_NAME ..."
+  vault secrets disable $ENGINE_NAME
+
+  # Disable kubernetes auth for this role
+  echo "vault auth disable $AUTH_NAME ..."
+  vault auth disable $AUTH_NAME
+}
+
+init() {
+  # Check
+  : "${1:?Parameter cannot be empty}"
+
+  # Params
+  ENGINE_NAME=$1
+  AUTH_NAME=$1
+  NM=$VAULT_NM
+  APP=$VAULT_NM
+
+  # Get k8s variables
+  KUBERNETES_CA_CERT=$(kubectl config view --minify=true --raw=true -o jsonpath="{.clusters[0].cluster.certificate-authority-data}" | base64 -d)
+  TOKEN_REVIEWER_JWT=$(kubectl -n $NM get secret $(kubectl -n $NM get sa $APP -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 -d)
+  KUBERNETES_HOST=$(kubectl config view --minify=true --raw=true -o jsonpath="{.clusters[0].cluster.server}")
+
+  # Check if all variables set
+  : "${KUBERNETES_CA_CERT:?Variable not set or empty}"
+  : "${TOKEN_REVIEWER_JWT:?Variable not set or empty}"
+  : "${KUBERNETES_HOST:?Variable not set or empty}"
+
+  #
+  echo "Init ========================="
+  echo "AUTH_NAME=$AUTH_NAME"
+  echo "ENGINE_NAME=$ENGINE_NAME"
+  echo "KUBERNETES_CA_CERT=$KUBERNETES_CA_CERT"
+  echo "KUBERNETES_HOST=$KUBERNETES_HOST"
+  echo "TOKEN_REVIEWER_JWT=$TOKEN_REVIEWER_JWT"
+  echo "=============================="
+
+  # Enable ENGINE
+  echo "vault secrets enable -path=$ENGINE_NAME kv ..."
+  vault secrets enable -version=2 -path=$ENGINE_NAME kv
+
+  # Enable This auth
+  echo "vault auth enable -path=$AUTH_NAME kubernetes ..."
+  vault auth enable -path=$AUTH_NAME kubernetes
+
+  # Delete before create
+  echo "vault delete auth/$AUTH_NAME/config ..."
+  vault delete "auth/$AUTH_NAME/config"
+
+  # Config the auth
+  echo "vault write auth/$AUTH_NAME/config ..."
+  vault write "auth/$AUTH_NAME/config" \
+    token_reviewer_jwt="$TOKEN_REVIEWER_JWT" \
+    kubernetes_host="$KUBERNETES_HOST" \
+    kubernetes_ca_cert="$KUBERNETES_CA_CERT"
+}
