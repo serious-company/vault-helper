@@ -12,14 +12,14 @@ This is a companion for https://github.com/banzaicloud/bank-vaults
 
 # Troubleshooting
 
-## Permission denied on retriving key
+## Permission denied on retrieving key
 
 ```sh
 level=fatal msg="failed to inject secrets from vault: failed to read secret from path: $ENGINE_NAME/data/$PATH: Error making API request.\n\nURL: GET https://$VAULT_ADDR/v1/$ENGINE_NAME/data/$PATH?version=-1\nCode: 403. Errors:\n\n* 1 error occurred:\n\t*
 permission denied\n\n"
 ```
 
-Check if the policies have enough permision
+Check if the policies have enough permission
 
 ## Permission denied on login
 
@@ -27,7 +27,7 @@ Check if the policies have enough permision
 level=info msg="failed to request new Vault token Error making API request.\n\nURL: PUT https://$VAULT_ADDR/v1/auth/$ENGINE_NAME/login\nCode: 403. Errors:\n\n* permission denied"
 ```
 
-This might be because the app service account is not in a ClusterRoleBinding with `system:auth-delegator`
+This might be because the app service account is not in a ClusterRoleBinding with `system:auth-delegator` or check the `vault.security.banzaicloud.io/vault-path`
 
 
 ## Invalid role name
@@ -36,7 +36,7 @@ This might be because the app service account is not in a ClusterRoleBinding wit
 level=info msg="failed to request new Vault token Error making API request.\n\nURL: PUT https://$VAULT_ADDR/v1/auth/$ENGINE_NAME/login\nCode: 400. Errors:\n\n* invalid role name \"$APP\""
 ```
 
-Check that the role exists on the autentication method, if everything fails try to create a very open policy to test like:
+Check that the role exists on the authentication method, if everything fails try to create a very open policy to test like:
 ```
 path "$ENGINE/data/*" {
   capabilities = ["read"]
