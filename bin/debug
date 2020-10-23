@@ -28,7 +28,7 @@ vault kv put "$ENGINE_NAME/$APP" foo='bar'
 vault kv get "$ENGINE_NAME/$APP" foo='bar'
 
 #
-kubectl -n $APP run tmp --rm -i --tty --image dwdraju/alpine-curl-jq -- bash
+kubectl -n $APP run tmp --rm -i --tty --image dwdraju/alpine-curl-jq --serviceaccount=$APP -- bash
 KUBE_TOKEN=\$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 TOKEN=\$(curl --request POST --data '{"jwt": "'"\$KUBE_TOKEN"'", "role": "$ROLE_NAME"}' $VAULT_ADDR/v1/auth/$AUTH_NAME/login | jq -r ".auth.client_token")
 curl -s -H "X-Vault-Token: \$TOKEN" --request LIST $VAULT_ADDR/v1/$ENGINE_NAME/metadata | jq

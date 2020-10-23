@@ -62,8 +62,6 @@ create() {
   echo "vault write auth/$AUTH_NAME/role/$ROLE_NAME ..."
   vault write "auth/$AUTH_NAME/role/$ROLE_NAME" \
     bound_service_account_names="$SVC_ACCOUNT" \
-    bound_service_account_names="$APP" \
-    bound_service_account_names="default" \
     bound_service_account_namespaces="$NM" \
     policies="$POLICY" \
     ttl=24h
