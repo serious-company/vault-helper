@@ -59,7 +59,7 @@ Check if the webhook controller has permission to mutate the resource you are wo
 ```
 level=error msg="admission webhook error: mutate generic secret failed: secret data key or template not defined" app=vault-secrets-webhook
 ```
-Check the vault key path, don't forget that the #
+Check the vault key path, don't forget the `#`
 
 
 ## Service Account name not authorized
